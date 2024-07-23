@@ -1,0 +1,11 @@
+# Ignore everything
+*
+
+# But not these files...
+!.gitignore
+!main/blink_example_main.c
+!Errors.docx
+# etc...
+
+# ...even if they are in subdirectories
+!*/
