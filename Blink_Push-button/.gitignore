@@ -4,6 +4,7 @@
 # But not these files...
 !.gitignore
 !main/BlinkButton.c
+!.vscode/c_cpp_properties.json
 #!Errors.docx
 # etc...
 

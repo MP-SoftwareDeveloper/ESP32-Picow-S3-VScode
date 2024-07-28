@@ -3,7 +3,7 @@
 
 # But not these files...
 !.gitignore
-!main/BlinkButton.c
+!main/main_app.c
 #!Errors.docx
 # etc...
 
