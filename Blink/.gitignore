@@ -5,7 +5,7 @@
 !.gitignore
 !main/blink_example_main.c
 !.vscode/c_cpp_properties.json
-!Errors.docx
+#!Errors.docx
 # etc...
 
 # ...even if they are in subdirectories

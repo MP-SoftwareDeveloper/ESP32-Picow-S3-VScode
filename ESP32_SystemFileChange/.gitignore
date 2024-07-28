@@ -6,6 +6,7 @@
 !main/mainFileSys.c
 #!Errors.docx
 !.vscode/c_cpp_properties.json
+!paritions.csv
 # etc...
 
 # ...even if they are in subdirectories
