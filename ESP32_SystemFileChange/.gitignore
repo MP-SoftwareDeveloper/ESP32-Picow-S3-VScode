@@ -1,0 +1,11 @@
+# Ignore everything
+*
+
+# But not these files...
+!.gitignore
+!main/mainFileSys.c
+#!Errors.docx
+# etc...
+
+# ...even if they are in subdirectories
+!*/
