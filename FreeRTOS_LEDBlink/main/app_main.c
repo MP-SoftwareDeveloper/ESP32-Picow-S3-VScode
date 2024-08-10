@@ -8,18 +8,19 @@
 
 void blink(void)
 {
-    gpio_set_direction(GPIO_NUM_13,GPIO_MODE_OUTPUT);
+   
 
     while(1)
     {
         gpio_set_level(GPIO_NUM_13,0);
-        vTaskDelay(1500/portTICK_PERIOD_MS);
+        vTaskDelay(100/portTICK_PERIOD_MS);
         gpio_set_level(GPIO_NUM_13,1 );
-        vTaskDelay(50/portTICK_PERIOD_MS);
+        vTaskDelay(100/portTICK_PERIOD_MS);
     }
 }
 void app_main(void)
 {
+     gpio_set_direction(GPIO_NUM_13,GPIO_MODE_OUTPUT);
     xTaskCreate(
         blink,   // Function to be called
      "LED blink",// Name of task
