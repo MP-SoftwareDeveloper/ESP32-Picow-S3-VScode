@@ -1,3 +1,23 @@
+/**
+ * FreeRTOS LED Demo
+ * 
+ * One task flashes an LED at a rate specified by a value set in another task.
+ * 
+ * Date: December 4, 2020
+ * Author: Shawn Hymel
+ * License: 0BSD
+ */
+
+/**
+ * FreeRTOS LED Demo
+ * 
+ * One task flashes an LED at a rate specified by a value set in another task.
+ * 
+ * Date: December 4, 2020
+ * Author: Shawn Hymel
+ * License: 0BSD
+ */
+
 /*Project Overview
 Objective:
 Develop an embedded system using the ESP32-S3 microcontroller, utilizing FreeRTOS to run two concurrent tasks:
@@ -34,17 +54,38 @@ UART Communication: Data sent from PuTTY appears in VSCode Terminal.
 #include "esp_log.h"
 #include "string.h"
 
-// CONFIG_FREERTOS_UNICORE
+// Needed for atoi()
+#include <stdlib.h>
 
+#define LOW 0
+#define HIGH 1
+#define led_pin GPIO_NUM_13
+
+const uart_port_t uart_num = UART_NUM_2;
+
+// Use only core 1 for demo purposes
+/* #if CONFIG_FREERTOS_UNICORE
+  static const BaseType_t app_cpu = 0;
+#else
+  static const BaseType_t app_cpu = 1;
+#endif */
+// Settings
+static const uint8_t buf_len = 20;
+
+static int led_delay = 300;
+static int val=0;
+
+
+// CONFIG_FREERTOS_UNICORE
+// Task: Blink LED at rate set by global variable
 void blink(void)
 {
-
     while (1)
     {
-        gpio_set_level(GPIO_NUM_13, 0);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-        gpio_set_level(GPIO_NUM_13, 1);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        gpio_set_level(led_pin, LOW);
+        vTaskDelay(led_delay / portTICK_PERIOD_MS);
+        gpio_set_level(led_pin, HIGH);
+        vTaskDelay(led_delay / portTICK_PERIOD_MS);
     }
 }
 // https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/peripherals/uart.html
@@ -63,10 +104,11 @@ Use Interrupts - Triggering interrupts on specific communication events
 Deleting a Driver - Freeing allocated resources if a UART communication is no longer required
 */
 
-static const char *TAG = "UART TEST";
+//static const char *TAG = "UART TEST";
 static void UartTest(void *arg)
 {
-    const uart_port_t uart_num = UART_NUM_2;
+
+    //const uart_port_t uart_num = UART_NUM_2;
     uart_config_t uart_config =
         {
             .baud_rate = 115200,
@@ -76,35 +118,70 @@ static void UartTest(void *arg)
             .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
             .rx_flow_ctrl_thresh = UART_SCLK_APB, // UART_SCLK_DEFAULT
         };
+    
     // Configure UART parameters
     ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
     // Set UART pins(TX: IO4, RX: IO5, RTS: IO18, CTS: IO19)
-    ESP_ERROR_CHECK(uart_set_pin(UART_NUM_2, 1, 2, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    ESP_ERROR_CHECK(uart_set_pin(uart_num, 1, 2, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 
     // Setup UART buffered IO with event queue
     const int uart_buffer_size = (1024 * 2);
     QueueHandle_t uart_queue;
     // Install UART driver using an event queue here
-    ESP_ERROR_CHECK(uart_driver_install(UART_NUM_2, uart_buffer_size,
+    ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size,
                                         uart_buffer_size, 10, &uart_queue, 0));
 
     // Write data to UART.
     // char* test_str = "This is a test string.\n\r";
 
-    uint8_t data[128];
+    uint8_t data[1];
+
+    ESP_LOGI("","Multi-task LED Demo");
+    ESP_LOGI("","Enter a number in milliseconds to change the LED delay.");
+    
+    char buf[buf_len];
+    uint8_t idx = 0;
+
+    // Clear whole buffer
+    memset(buf, 0, buf_len);
+    //uint8_t data[128];
+    int length = 0;
+    vTaskDelay(500 / portTICK_PERIOD_MS);    // Configure serial and wait a second 
+    // Loop forever
 
     ESP_LOGI("UART Test: ", "Begin..............................................................");
     while (1)
     {
-        // uart_write_bytes(uart_num, (const char*)test_str, strlen(test_str));
-        int len = uart_read_bytes(uart_num, data, 128 - 1, 10); // last number 10 means how fast you can send data. it is uart buffer clear timeout
+        int len = uart_read_bytes(uart_num, data, 1, 10); // last number 10 means how fast you can send data. it is uart buffer clear timeout
         uart_write_bytes(uart_num, (const char *)data, len);
-        // ESP_LOGI("UART Test", "Recv str: %s", (const char *)data);
-        if (len)
+    // Read characters from serial
+    if (len) 
+    {       
+      // Update delay variable and reset buffer if we get a newline character
+      if (data[0] == 13) // 13 is ascii code for Enter on keyboard
+      {         
+        val = atoi(buf);
+        printf("Integer value = %d\n", val);
+        if(val >50) // small number for vTaskdelay will cause problem
+          led_delay =val;
+        ESP_LOGI("","int delay to: %d",led_delay);
+        memset(buf, 0, buf_len);
+        idx = 0;
+      } 
+      else 
+      {    
+        //ESP_LOGI("","Please... ");    
+        // Only append if index is not over message limit
+        if (idx < buf_len - 1) 
         {
-            data[len] = '\0';
-            ESP_LOGI("UART Test", "Recv str: %s", (const char *)data);
+          //ESP_LOGI("","num= %d",data[0]);
+          ESP_LOGE("","num= %s",data);  
+          //printf("%s", data);
+          buf[idx] = data[0];
+          idx++ ;
         }
+      }
+    } 
     }
 }
 void app_main(void)
@@ -120,5 +197,5 @@ void app_main(void)
         0            // RUN on one core
     );
 
-    xTaskCreate(UartTest, "UartTest_task", 4098, NULL, 10, NULL);
+    xTaskCreate(UartTest, "UartTest_task", 4098, NULL, 10, 0);
 }
